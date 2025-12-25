@@ -6,6 +6,7 @@ export default defineEventHandler(async (event) => {
   const page = Number(query.page) || 1
   const limit = Number(query.limit) || 10
   const search = (query.search as string) || ''
+  const category = (query.category as string) || ''
   const skip = (page - 1) * limit
 
   const where: any = { deptId: id }
@@ -13,6 +14,9 @@ export default defineEventHandler(async (event) => {
     where.desc = {
       contains: search,
     }
+  }
+  if (category) {
+    where.category = category
   }
 
   try {

@@ -8,51 +8,51 @@ async function main() {
     {
       name: 'Engineering',
       tasks: [
-        'Setup Development Environment',
-        'Review Code Style Guidelines',
-        'Gain Access to GitHub Repository',
-        'Complete Security Compliance Training',
-        'Read System Architecture Docs',
+        { desc: 'Setup Development Environment', category: 'First day' },
+        { desc: 'Review Code Style Guidelines', category: 'First week' },
+        { desc: 'Gain Access to GitHub Repository', category: 'First day' },
+        { desc: 'Complete Security Compliance Training', category: 'Pre-hire' },
+        { desc: 'Read System Architecture Docs', category: 'First week' },
       ],
     },
     {
       name: 'HR',
       tasks: [
-        'Review Employee Handbook',
-        'Complete Benefits Enrollment',
-        'Submit Payroll Information',
-        'Harassment Prevention Training',
-        'Meet with Department Head',
+        { desc: 'Review Employee Handbook', category: 'Pre-hire' },
+        { desc: 'Complete Benefits Enrollment', category: 'First day' },
+        { desc: 'Submit Payroll Information', category: 'Pre-hire' },
+        { desc: 'Harassment Prevention Training', category: 'First week' },
+        { desc: 'Meet with Department Head', category: 'First day' },
       ],
     },
     {
       name: 'Marketing',
       tasks: [
-        'Review Brand Guidelines',
-        'Access Social Media Accounts',
-        'Analyze Competitor Landscape',
-        'Setup Analytics Tools',
-        'Read Content Strategy',
+        { desc: 'Review Brand Guidelines', category: 'First day' },
+        { desc: 'Access Social Media Accounts', category: 'First day' },
+        { desc: 'Analyze Competitor Landscape', category: 'First week' },
+        { desc: 'Setup Analytics Tools', category: 'First day' },
+        { desc: 'Read Content Strategy', category: 'First week' },
       ],
     },
     {
       name: 'Sales',
       tasks: [
-        'CRM Software Training',
-        'Review Sales Scripts',
-        'Shadow a Senior Sales Rep',
-        'Product Demo Walkthrough',
-        'Review Pricing Model',
+        { desc: 'CRM Software Training', category: 'First day' },
+        { desc: 'Review Sales Scripts', category: 'First week' },
+        { desc: 'Shadow a Senior Sales Rep', category: 'First week' },
+        { desc: 'Product Demo Walkthrough', category: 'First day' },
+        { desc: 'Review Pricing Model', category: 'First week' },
       ],
     },
     {
       name: 'IT',
       tasks: [
-        'Setup Company Email',
-        'Configure VPN Access',
-        'Hardware Provisioning',
-        'Security Policy Acknowledgement',
-        'Password Manager Setup',
+        { desc: 'Setup Company Email', category: 'Pre-hire' },
+        { desc: 'Configure VPN Access', category: 'First day' },
+        { desc: 'Hardware Provisioning', category: 'Pre-hire' },
+        { desc: 'Security Policy Acknowledgement', category: 'First day' },
+        { desc: 'Password Manager Setup', category: 'First day' },
       ],
     },
   ]
@@ -67,7 +67,10 @@ async function main() {
       create: {
         name: dept.name,
         tasks: {
-          create: dept.tasks.map((desc) => ({ desc })),
+          create: dept.tasks.map((task) => ({
+            desc: task.desc,
+            category: task.category,
+          })),
         },
       },
     })

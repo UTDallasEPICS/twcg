@@ -3,6 +3,7 @@ import { prisma } from '@@/server/utils/prisma'
 
 const updateTaskSchema = z.object({
   desc: z.string().min(1, 'Description is required'),
+  category: z.string().min(1, 'Category is required'),
 })
 
 export default defineEventHandler(async (event) => {
@@ -24,6 +25,7 @@ export default defineEventHandler(async (event) => {
       where: { id },
       data: {
         desc: result.data.desc,
+        category: result.data.category,
       },
     })
     return task

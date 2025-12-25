@@ -20,6 +20,39 @@
     })
   }
 
+  // Categories State
+  const { data: categories, refresh: refreshCategories } = await useFetch(
+    `/api/get/departments/${deptId}/task-categories`
+  )
+
+  const localCategories = ref<string[]>([])
+  const activeCategory = ref('')
+
+  watch(
+    categories,
+    (newVal) => {
+      localCategories.value = [...(newVal || [])]
+      // Set initial category
+      if (newVal?.length && !activeCategory.value) {
+        activeCategory.value = newVal[0]
+      }
+    },
+    { immediate: true }
+  )
+
+  function onCreateCategory(newItem: string) {
+    localCategories.value.push(newItem)
+    formState.category = newItem
+  }
+
+  const tabItems = computed(() => {
+    return (categories.value || []).map((cat: string) => ({
+      label: cat,
+      value: cat,
+    }))
+  })
+
+
   // Tasks Table State
   const page = ref(1)
   const limit = ref(5)
@@ -29,17 +62,18 @@
   const {
     data: tasksData,
     status,
-    refresh,
+    refresh: refreshTasks,
   } = await useFetch(`/api/get/departments/${deptId}/tasks`, {
     query: {
       page,
       limit,
       search: debouncedSearch,
+      category: activeCategory,
     },
-    watch: [page, limit, debouncedSearch],
+    watch: [page, limit, debouncedSearch, activeCategory],
   })
 
-  watch(debouncedSearch, () => {
+  watch([activeCategory, debouncedSearch], () => {
     page.value = 1
   })
 
@@ -48,13 +82,13 @@
   const selectedTaskId = ref<string | null>(null)
   const formState = reactive({
     desc: '',
+    category: '',
   })
 
   const taskSchema = z.object({
     desc: z.string().min(1, 'Description is required'),
+    category: z.string().min(1, 'Category is required'),
   })
-
-  const fields: Field[] = [{ name: 'desc', label: 'Task Description' }]
 
   async function handleUpdate(data: typeof formState) {
     try {
@@ -66,7 +100,7 @@
         title: 'Task updated successfully',
         color: 'success',
       })
-      await refresh()
+      await Promise.all([refreshTasks(), refreshCategories()])
     } catch (error) {
       toast.add({
         title: 'Failed to update task',
@@ -85,6 +119,7 @@
           onSelect: () => {
             selectedTaskId.value = row.id
             formState.desc = row.desc
+            formState.category = row.category
             isModalOpen.value = true
           },
         },
@@ -114,10 +149,10 @@
       </h1>
     </div>
 
-    <div>
-      <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-        Tasks
-      </h2>
+    <div v-if="tabItems.length" class="flex flex-col gap-4">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Tasks</h2>
+      <UTabs v-model="activeCategory" :items="tabItems" class="w-full" />
+
       <Table
         v-model:page="page"
         v-model:search="search"
@@ -129,14 +164,31 @@
         :row-menu-items="getActions"
       />
     </div>
+    <div v-else-if="status !== 'pending'" class="py-10 text-center">
+      <p class="text-gray-500 dark:text-gray-400">
+        No tasks found for this department.
+      </p>
+    </div>
 
     <FormModal
       v-model="isModalOpen"
       title="Edit Task"
       :schema="taskSchema"
       :state="formState"
-      :fields="fields"
       :on-submit="handleUpdate"
-    />
+    >
+      <UFormField label="Description" name="desc">
+        <UTextarea v-model="formState.desc" class="w-full" />
+      </UFormField>
+      <UFormField label="Category" name="category">
+        <UInputMenu
+          v-model="formState.category"
+          :items="localCategories"
+          create-item
+          class="w-full"
+          @create="onCreateCategory"
+        />
+      </UFormField>
+    </FormModal>
   </div>
 </template>

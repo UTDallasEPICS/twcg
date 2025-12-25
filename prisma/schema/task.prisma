@@ -1,6 +1,7 @@
 model Task {
   id         String     @id @default(uuid())
   desc       String
+  category   String     @default("General")
   deptId     String
   department Department @relation(fields: [deptId], references: [id])
 
