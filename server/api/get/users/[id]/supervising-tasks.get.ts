@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
-        supervisingTasks: {
+        supervisedTasks: {
           include: {
             department: true,
           },
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    return user.supervisingTasks
+    return user.supervisedTasks
   } catch (error) {
     console.error('Failed to fetch supervising tasks:', error)
     throw createError({

@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
           name: result.data.name,
           email: result.data.email,
           phone: phone,
-          supervisingTasks: {
+          supervisedTasks: {
             set: result.data.supervisingTaskIds.map((tid) => ({ id: tid })),
           },
         },

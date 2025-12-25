@@ -112,66 +112,49 @@ async function main() {
     { name: 'Supervisor Three', email: 'supervisor3@example.com' },
   ]
 
+  const createdSupervisors: any[] = []
+
   for (const supervisor of supervisors) {
-    let tasksToSupervise = []
-
-    if (supervisor.email === 'supervisor1@example.com') {
-      // Supervisor 1: Engineering and HR
-      const engineeringTasks = allTasks.filter(
-        (t) =>
-          createdDepartments.find((d) => d.id === t.deptId)?.name ===
-          'Engineering'
-      )
-      const hrTasks = allTasks.filter(
-        (t) =>
-          createdDepartments.find((d) => d.id === t.deptId)?.name === 'HR'
-      )
-      // Take 2 from each
-      tasksToSupervise = [
-        ...engineeringTasks.slice(0, 2),
-        ...hrTasks.slice(0, 2),
-      ]
-    } else if (supervisor.email === 'supervisor2@example.com') {
-      // Supervisor 2: Sales and Marketing
-       const salesTasks = allTasks.filter(
-        (t) =>
-          createdDepartments.find((d) => d.id === t.deptId)?.name ===
-          'Sales'
-      )
-      const marketingTasks = allTasks.filter(
-        (t) =>
-          createdDepartments.find((d) => d.id === t.deptId)?.name === 'Marketing'
-      )
-      tasksToSupervise = [
-        ...salesTasks.slice(0, 2),
-        ...marketingTasks.slice(0, 2),
-      ]
-    } else {
-      // Random for others
-      tasksToSupervise = [...allTasks]
-        .sort(() => 0.5 - Math.random())
-        .slice(0, 5)
-    }
-
-    await prisma.user.upsert({
+    const s = await prisma.user.upsert({
       where: { email: supervisor.email },
-      update: {
-        role: 'SUPERVISOR',
-        supervisingTasks: {
-          set: tasksToSupervise.map((t) => ({ id: t.id })),
-        },
-      },
+      update: { role: 'SUPERVISOR' },
       create: {
         name: supervisor.name,
         email: supervisor.email,
         role: 'SUPERVISOR',
         emailVerified: true,
-        supervisingTasks: {
-          connect: tasksToSupervise.map((t) => ({ id: t.id })),
-        },
       },
     })
+    createdSupervisors.push(s)
     console.log(`Seeded Supervisor: ${supervisor.email}`)
+  }
+
+  // Assign Tasks to Supervisors
+  console.log('Assigning tasks to supervisors...')
+  for (const task of allTasks) {
+    // Find department name
+    const deptName = createdDepartments.find((d) => d.id === task.deptId)?.name
+    let supervisorEmail = null
+
+    if (deptName === 'Engineering' || deptName === 'HR') {
+      supervisorEmail = 'supervisor1@example.com'
+    } else if (deptName === 'Sales' || deptName === 'Marketing') {
+      supervisorEmail = 'supervisor2@example.com'
+    } else if (deptName === 'IT') {
+      supervisorEmail = 'supervisor3@example.com'
+    }
+
+    if (supervisorEmail) {
+      const supervisor = createdSupervisors.find(
+        (s) => s.email === supervisorEmail
+      )
+      if (supervisor) {
+        await prisma.task.update({
+          where: { id: task.id },
+          data: { supervisorId: supervisor.id },
+        })
+      }
+    }
   }
 
   // 3. Employees

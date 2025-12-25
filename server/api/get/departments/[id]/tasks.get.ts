@@ -26,6 +26,9 @@ export default defineEventHandler(async (event) => {
         skip,
         take: limit,
         orderBy: { desc: 'asc' },
+        include: {
+          supervisor: true,
+        },
       }),
       prisma.task.count({
         where,

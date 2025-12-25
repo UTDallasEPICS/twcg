@@ -102,13 +102,16 @@
           {{ deptName }}
         </h4>
         <div class="pl-2 flex flex-col gap-1.5">
-          <UCheckbox
-            v-for="task in tasks"
-            :key="task.id"
-            :model-value="modelValue.includes(task.id)"
-            :label="task.desc"
-            @update:model-value="(checked) => toggleTask(task.id, checked)"
-          />
+          <div v-for="task in tasks" :key="task.id" class="flex flex-col">
+            <UCheckbox
+              :model-value="modelValue.includes(task.id)"
+              :label="task.desc"
+              @update:model-value="(checked) => toggleTask(task.id, checked)"
+            />
+            <span v-if="task.currentSupervisor" class="text-[10px] text-gray-400 pl-6 -mt-1">
+              Currently assigned to: {{ task.currentSupervisor }}
+            </span>
+          </div>
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ export default defineEventHandler(async () => {
     const tasks = await prisma.task.findMany({
       include: {
         department: true,
+        supervisor: true,
       },
       orderBy: {
         department: {
@@ -18,6 +19,7 @@ export default defineEventHandler(async () => {
       label: `[${task.department.name}] ${task.desc}`,
       value: task.id,
       deptId: task.deptId,
+      currentSupervisor: task.supervisor?.name || null,
     }))
   } catch (error) {
     console.error('Failed to fetch all tasks:', error)

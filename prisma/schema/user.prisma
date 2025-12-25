@@ -9,11 +9,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessions         Session[]
-  deptId           String?
-  department       Department?      @relation(fields: [deptId], references: [id])
-  onboardingTasks  OnboardingTask[]
-  supervisingTasks Task[]           @relation("SupervisorTasks")
+  sessions        Session[]
+  deptId          String?
+  department      Department?      @relation(fields: [deptId], references: [id])
+  onboardingTasks OnboardingTask[]
+  supervisedTasks Task[]           @relation("TaskSupervisor")
 
   @@unique([email])
   @@map("user")

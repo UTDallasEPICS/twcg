@@ -7,7 +7,11 @@ export default defineEventHandler(async (event) => {
     const onboardingTasks = await prisma.onboardingTask.findMany({
       where: { userId },
       include: {
-        task: true,
+        task: {
+          include: {
+            supervisor: true,
+          },
+        },
       },
       orderBy: {
         task: {

@@ -53,6 +53,11 @@
   })
 
 
+  // Supervisors for Assignment
+  const { data: supervisors } = await useFetch('/api/get/users', {
+    query: { role: 'SUPERVISOR', limit: 100 }
+  })
+
   // Tasks Table State
   const page = ref(1)
   const limit = ref(5)
@@ -83,11 +88,13 @@
   const formState = reactive({
     desc: '',
     category: '',
+    supervisorId: null as string | null,
   })
 
   const taskSchema = z.object({
     desc: z.string().min(1, 'Description is required'),
     category: z.string().min(1, 'Category is required'),
+    supervisorId: z.string().nullable().optional(),
   })
 
   async function handleUpdate(data: typeof formState) {
@@ -120,6 +127,7 @@
             selectedTaskId.value = row.id
             formState.desc = row.desc
             formState.category = row.category
+            formState.supervisorId = row.supervisorId || null
             isModalOpen.value = true
           },
         },
@@ -131,6 +139,11 @@
     {
       accessorKey: 'desc',
       header: 'Description',
+    },
+    {
+      accessorKey: 'supervisor.name',
+      header: 'Assigned To',
+      cell: ({ row }) => row.original.supervisor?.name || 'Unassigned',
     },
   ]
 </script>
@@ -187,6 +200,16 @@
           create-item
           class="w-full"
           @create="onCreateCategory"
+        />
+      </UFormField>
+      <UFormField label="Supervisor" name="supervisorId">
+        <USelectMenu
+          v-model="formState.supervisorId"
+          :items="supervisors?.data || []"
+          value-key="id"
+          label-key="name"
+          class="w-full"
+          placeholder="Select Supervisor"
         />
       </UFormField>
     </FormModal>

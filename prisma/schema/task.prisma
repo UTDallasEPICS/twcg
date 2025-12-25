@@ -5,7 +5,8 @@ model Task {
   deptId          String
   department      Department       @relation(fields: [deptId], references: [id])
   onboardingTasks OnboardingTask[]
-  supervisors     User[]           @relation("SupervisorTasks")
+  supervisorId    String?
+  supervisor      User?            @relation("TaskSupervisor", fields: [supervisorId], references: [id])
 
   @@map("task")
 }

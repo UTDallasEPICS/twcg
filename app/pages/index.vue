@@ -178,7 +178,11 @@
 
   function handleRowClick(_event: any, row: any) {
     if (row.original.role === 'ADMIN') return
-    navigateTo(`/users/${row.original.id}`)
+    if (row.original.role === 'SUPERVISOR') {
+      navigateTo(`/supervisor/${row.original.id}`)
+    } else {
+      navigateTo(`/onboarding/${row.original.id}`)
+    }
   }
 </script>
 
