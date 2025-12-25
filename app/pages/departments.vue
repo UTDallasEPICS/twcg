@@ -1,12 +1,17 @@
 <script setup lang="ts">
   import type { TableColumn, ContextMenuItem } from '@nuxt/ui'
-  import { UButton, UDropdownMenu } from '#components'
+  import { z } from 'zod'
+  import type { Field } from '~/components/FormModal.vue'
 
   const toast = useToast()
   const page = ref(1)
   const limit = 5
 
-  const { data: deps, status } = await useFetch('/api/get/departments', {
+  const {
+    data: deps,
+    status,
+    refresh,
+  } = await useFetch('/api/get/departments', {
     query: {
       page,
       limit,
@@ -21,6 +26,39 @@
     })
   }
 
+  // Edit Modal State
+  const isModalOpen = ref(false)
+  const selectedId = ref<string | null>(null)
+  const formState = reactive({
+    name: '',
+  })
+
+  const departmentSchema = z.object({
+    name: z.string().min(1, 'Name is required'),
+  })
+
+  const fields: Field[] = [{ name: 'name', label: 'Department Name' }]
+
+  async function handleUpdate(data: typeof formState) {
+    try {
+      await $fetch(`/api/put/departments/${selectedId.value}`, {
+        method: 'PUT',
+        body: data,
+      })
+      toast.add({
+        title: 'Department updated successfully',
+        color: 'success',
+      })
+      await refresh()
+    } catch (error) {
+      toast.add({
+        title: 'Failed to update department',
+        color: 'error',
+      })
+      throw error
+    }
+  }
+
   function getActions(row: any): ContextMenuItem[][] {
     return [
       [
@@ -28,10 +66,9 @@
           label: 'Edit',
           icon: 'i-heroicons-pencil',
           onSelect: () => {
-            toast.add({
-              title: `Edit department: ${row.name}`,
-              color: 'info',
-            })
+            selectedId.value = row.id
+            formState.name = row.name
+            isModalOpen.value = true
           },
         },
       ],
@@ -54,18 +91,24 @@
 </script>
 
 <template>
-  <div class="flex w-full items-center justify-center">
-    <div class="w-full md:mt-5 md:w-3/4">
-      <Table
-        v-model:page="page"
-        :columns="columns"
-        :data="deps?.data || []"
-        :loading="status === 'pending'"
-        :total="deps?.total || 0"
-        :items-per-page="limit"
-        :row-menu-items="getActions"
-        :class="''"
-      />
-    </div>
+  <div class="p-4">
+    <Table
+      v-model:page="page"
+      :columns="columns"
+      :data="deps?.data || []"
+      :loading="status === 'pending'"
+      :total="deps?.total || 0"
+      :items-per-page="limit"
+      :row-menu-items="getActions"
+    />
+
+    <FormModal
+      v-model="isModalOpen"
+      title="Edit Department"
+      :schema="departmentSchema"
+      :state="formState"
+      :fields="fields"
+      :on-submit="handleUpdate"
+    />
   </div>
 </template>
