@@ -44,8 +44,7 @@
         cell: ({ row }) => {
           const items = props.rowMenuItems!(row.original)
           // Ensure items is an array of arrays for UDropdownMenu
-          const dropdownItems =
-            items.length > 0 && Array.isArray(items[0]) ? items : [items]
+          const dropdownItems = items.length > 0 && Array.isArray(items[0]) ? items : [items]
 
           return h(
             UDropdownMenu,
@@ -78,7 +77,9 @@
 </script>
 
 <template>
-  <div class="flex w-full flex-col">
+  <div
+    class="flex w-full flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800"
+  >
     <UContextMenu :items="menuItems" :disabled="!rowMenuItems">
       <UTable
         :data="data"
@@ -108,7 +109,8 @@
             font: 'text-sm',
           },
           loadingState: {
-            wrapper: 'flex flex-col items-center justify-center flex-1 px-6 py-14 sm:px-14',
+            wrapper:
+              'flex flex-col items-center justify-center flex-1 px-6 py-14 sm:px-14',
             label: 'text-sm text-center text-gray-900 dark:text-white',
             icon: 'w-6 h-6 mx-auto text-gray-400 dark:text-gray-500 mb-4 animate-spin',
           },
@@ -121,7 +123,11 @@
       v-if="(total || 0) > 0"
       class="flex items-center justify-center border-t border-gray-200 p-4 dark:border-gray-800"
     >
-      <UPagination v-model:page="currentPage" :total="total" :items-per-page="itemsPerPage" />
+      <UPagination
+        v-model:page="currentPage"
+        :total="total"
+        :items-per-page="itemsPerPage"
+      />
     </div>
   </div>
 </template>

@@ -64,7 +64,7 @@
         :total="deps?.total || 0"
         :items-per-page="limit"
         :row-menu-items="getActions"
-        :class="'md:rounded-lg md:border'"
+        :class="''"
       />
     </div>
   </div>
