@@ -24,7 +24,6 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@google/gemini-cli": "^0.22.2",
     "@iconify-json/lucide": "^1.2.82",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.0.3",
