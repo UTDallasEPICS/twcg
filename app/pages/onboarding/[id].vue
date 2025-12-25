@@ -1,9 +1,16 @@
 <script setup lang="ts">
   import type { TableColumn } from '@nuxt/ui'
   import { refDebounced } from '@vueuse/core'
+  import { h, resolveComponent } from 'vue'
+  import { authClient } from '~/utils/auth-client'
 
   const route = useRoute()
   const userId = route.params.id as string
+  const UCheckbox = resolveComponent('UCheckbox')
+
+  // Fetch Current Session
+  const { data: session } = await authClient.useSession(useFetch)
+  const isOnboardingUser = computed(() => session.value?.user?.role === 'ONBOARDING')
 
   // Fetch User Info
   const { data: user } = await useFetch(`/api/get/users/byId/${userId}`)
@@ -67,58 +74,60 @@
     return filteredData.value.slice(start, start + limit.value)
   })
 
-  const columns: TableColumn<any>[] = [
-    {
-      accessorKey: 'task.desc',
-      header: 'Task',
-    },
-    {
-      accessorKey: 'task.supervisor.name',
-      header: 'Supervisor',
-      cell: ({ row }) => row.original.task.supervisor?.name || 'Unassigned',
-    },
-    {
-      accessorKey: 'completed',
-      header: 'Status',
-      cell: ({ row }) => {
-        const completed = row.original.completed
-        return h(
-          'div',
-          { class: 'flex items-center' },
-          h(
-            'span',
-            { 
-              class: [
-                'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-                completed
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-              ],
-            },
-            completed ? 'Completed' : 'Pending'
-          )
-        )
+    const columns: TableColumn<any>[] = [
+      {
+        accessorKey: 'completed',
+        header: 'Status',
+        cell: ({ row }) => {
+          return h('div', { class: 'flex items-center gap-2' }, [
+            h(UCheckbox, {
+              modelValue: row.original.completed,
+              disabled: isOnboardingUser.value,
+              'onUpdate:modelValue': (val: boolean) => toggleStatus(row.original, val),
+            }),
+            h('span', {
+              class: ['text-xs font-medium', row.original.completed ? 'text-green-600' : 'text-gray-500']
+            }, row.original.completed ? 'Completed' : 'Pending')
+          ])
+        }
       },
-    },
-  ]
-</script>
-
+      {
+        accessorKey: 'task.desc',
+        header: 'Task',
+      },
+      {
+        accessorKey: 'task.supervisor.name',
+        header: 'Supervisor',
+        cell: ({ row }) => row.original.task.supervisor?.name || 'Unassigned',
+      },
+    ]
+  
+    async function toggleStatus(row: any, checked: boolean) {
+      try {
+        await $fetch(`/api/put/onboarding-tasks/${row.id}`, {
+          method: 'PUT',
+          body: { completed: checked },
+        })
+        await refresh()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  </script>
 <template>
   <div class="flex flex-col gap-6 p-6">
     <div class="flex items-center gap-4">
       <UButton
+        v-if="!isOnboardingUser"
         icon="i-heroicons-arrow-left"
         color="neutral"
         variant="ghost"
         to="/"
       />
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 v-if="!isOnboardingUser" class="text-2xl font-bold text-gray-900 dark:text-white">
           {{ user?.name }}
         </h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          {{ user?.role }} • {{ user?.department?.name || 'No Department' }}
-        </p>
       </div>
     </div>
 

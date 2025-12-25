@@ -47,7 +47,7 @@
 
 <template>
   <UApp>
-    <UHeader v-if="route.path !== '/auth'">
+    <UHeader v-if="route.path !== '/auth'" :toggle="false">
       <UNavigationMenu :items="items" variant="pill" />
 
       <template #title>
@@ -67,10 +67,6 @@
             :label="session?.user?.name.split(' ')[0] || 'User'"
           />
         </UDropdownMenu>
-      </template>
-
-      <template #body>
-        <UNavigationMenu :items="items" orientation="vertical" class="-mx-2.5" />
       </template>
     </UHeader>
 

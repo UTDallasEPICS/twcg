@@ -12,12 +12,22 @@ export default defineNuxtRouteMiddleware(async (to) => {
     console.log({ session: session.value })
     // User is logged in
     const role = session?.value?.user?.role
-    //if (role === 'VOLUNTEER') {
-    //  // Volunteers can only access /rides and its sub-paths, and /settings
-    //  if (!to.path.startsWith('/rides') && to.path !== '/settings') {
-    //    return navigateTo('/rides')
-    //  }
-    //}
+    const userId = session?.value?.user?.id
+
+    if (role === 'SUPERVISOR') {
+      const targetPath = `/supervisor/${userId}`
+      if (to.path !== targetPath) {
+        return navigateTo(targetPath)
+      }
+    }
+
+    if (role === 'ONBOARDING') {
+      const targetPath = `/onboarding/${userId}`
+      if (to.path !== targetPath) {
+        return navigateTo(targetPath)
+      }
+    }
+
     if (to.path === '/auth') {
       return navigateTo('/')
     }

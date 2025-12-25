@@ -10,6 +10,11 @@ export default defineEventHandler(async (event) => {
         supervisedTasks: {
           include: {
             department: true,
+            onboardingTasks: {
+              include: {
+                user: true, // Fetch the employee details
+              },
+            },
           },
         },
       },
