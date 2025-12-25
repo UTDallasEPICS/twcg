@@ -59,55 +59,56 @@
             >
               {{ title }}
             </h3>
-            <UButton
-              color="gray"
-              variant="ghost"
-              icon="i-heroicons-x-mark-20-solid"
-              class="-my-1"
-              @click="isOpen = false"
-            />
-          </div>
-        </template>
-
-        <UForm
-          :schema="schema"
-          :state="state"
-          class="space-y-4"
-          @submit="handleSubmit"
-        >
-          <slot>
-            <template v-if="fields">
-              <UFormGroup
-                v-for="field in fields"
-                :key="field.name as string"
-                :label="field.label"
-                :name="field.name as string"
-                :required="field.required"
-              >
-                <UInput
-                  v-model="state[field.name]"
-                  :type="field.type || 'text'"
-                  :placeholder="field.placeholder"
-                />
-              </UFormGroup>
-            </template>
-          </slot>
-
-          <div class="flex justify-end gap-2 pt-4">
-            <UButton
-              label="Cancel"
-              color="gray"
-              variant="ghost"
-              @click="isOpen = false"
-            />
-            <UButton
-              type="submit"
-              label="Save"
-              color="primary"
-              :loading="loading"
-            />
-          </div>
-        </UForm>
+                        <UButton
+                          color="neutral"
+                          variant="ghost"
+                          icon="i-heroicons-x-mark-20-solid"
+                          class="-my-1"
+                          @click="isOpen = false"
+                        />
+                      </div>
+                    </template>
+            
+                    <UForm
+                      :schema="schema"
+                      :state="state"
+                      class="space-y-4"
+                      @submit="handleSubmit"
+                    >
+                      <slot>
+                        <template v-if="fields">
+                          <UFormField
+                            v-for="field in fields"
+                            :key="field.name as string"
+                            :label="field.label"
+                            :name="field.name as string"
+                            :required="field.required"
+                          >
+                            <UInput
+                              v-model="state[field.name]"
+                              :type="field.type || 'text'"
+                              :placeholder="field.placeholder"
+                              class="w-full"
+                            />
+                          </UFormField>
+                        </template>
+                      </slot>
+            
+                      <div class="flex justify-end gap-2 pt-4">
+                        <UButton
+                          label="Cancel"
+                          color="neutral"
+                          variant="subtle"
+                          @click="isOpen = false"
+                        />
+                        <UButton
+                          type="submit"
+                          label="Save"
+                          color="primary"
+                          :loading="loading"
+                        />
+                      </div>
+                    </UForm>
       </UCard>
     </template>
   </UModal>

@@ -11,6 +11,11 @@
     if (role === 'ADMIN') {
       return [
         {
+          label: 'People',
+          to: '/',
+          icon: 'i-lucide-users',
+        },
+        {
           label: 'Departments',
           to: '/departments',
           icon: 'i-lucide-building-2',

@@ -2,10 +2,13 @@
   import type { TableColumn, ContextMenuItem } from '@nuxt/ui'
   import { z } from 'zod'
   import type { Field } from '~/components/FormModal.vue'
+  import { refDebounced } from '@vueuse/core'
 
   const toast = useToast()
   const page = ref(1)
-  const limit = 5
+  const limit = ref(5)
+  const search = ref('')
+  const debouncedSearch = refDebounced(search, 500)
 
   const {
     data: deps,
@@ -15,8 +18,13 @@
     query: {
       page,
       limit,
+      search: debouncedSearch,
     },
-    watch: [page],
+    watch: [page, limit, debouncedSearch],
+  })
+
+  watch(debouncedSearch, () => {
+    page.value = 1
   })
 
   if (status.value === 'error') {
@@ -88,18 +96,30 @@
       },
     },
   ]
+
+  function handleRowClick(_event: any, row: any) {
+    console.log('Row clicked:', row)
+    console.log('Target ID:', row.original?.id)
+    if (row.original?.id) {
+      navigateTo(`/departments/${row.original.id}`)
+    } else {
+      console.error('No ID found in row data')
+    }
+  }
 </script>
 
 <template>
   <div class="p-4">
     <Table
       v-model:page="page"
+      v-model:search="search"
+      v-model:items-per-page="limit"
       :columns="columns"
       :data="deps?.data || []"
       :loading="status === 'pending'"
       :total="deps?.total || 0"
-      :items-per-page="limit"
       :row-menu-items="getActions"
+      @select="handleRowClick"
     />
 
     <FormModal
