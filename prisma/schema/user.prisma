@@ -1,0 +1,18 @@
+model User {
+  id            String  @id @default(uuid())
+  name          String
+  email         String
+  emailVerified Boolean @default(false)
+  phone         String? @unique
+  role          Role    @default(ONBOARDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions   Session[]
+  deptId     String?
+  department Department? @relation(fields: [deptId], references: [id])
+
+  @@unique([email])
+  @@map("user")
+}

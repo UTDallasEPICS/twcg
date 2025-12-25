@@ -1,0 +1,10 @@
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@prisma/engines'
+  - better-sqlite3
+  - esbuild
+  - node-pty
+  - prisma
+  - protobufjs
+  - tree-sitter-bash
+  - vue-demi

@@ -1,0 +1,8 @@
+model Task {
+  id         String     @id @default(uuid())
+  desc       String
+  deptId     String
+  department Department @relation(fields: [deptId], references: [id])
+
+  @@map("task")
+}
