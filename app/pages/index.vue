@@ -148,26 +148,33 @@
     ]
   }
 
-  const columns: TableColumn<any>[] = [
-    {
-      accessorKey: 'name',
-      header: 'Name',
-    },
-    {
-      accessorKey: 'email',
-      header: 'Email',
-    },
-    {
-      accessorKey: 'phone',
-      header: 'Phone',
-      cell: ({ row }) => formatPhoneNumber(row.original.phone) || 'N/A',
-    },
-    {
-      accessorKey: 'department.name',
-      header: 'Department',
-      cell: ({ row }) => row.original.department?.name || 'Unassigned',
-    },
-  ]
+  const columns = computed<TableColumn<any>[]>(() => {
+    const cols: TableColumn<any>[] = [
+      {
+        accessorKey: 'name',
+        header: 'Name',
+      },
+      {
+        accessorKey: 'email',
+        header: 'Email',
+      },
+      {
+        accessorKey: 'phone',
+        header: 'Phone',
+        cell: ({ row }) => formatPhoneNumber(row.original.phone) || 'N/A',
+      },
+    ]
+
+    if (activeTab.value === 'ONBOARDING') {
+      cols.push({
+        accessorKey: 'department.name',
+        header: 'Department',
+        cell: ({ row }) => row.original.department?.name || 'Unassigned',
+      })
+    }
+
+    return cols
+  })
 
   function handleRowClick(_event: any, row: any) {
     if (row.original.role === 'ADMIN') return
