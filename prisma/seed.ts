@@ -60,6 +60,7 @@ async function main() {
   const createdDepartments = []
 
   // --- Seed Departments ---
+  const allTasks = []
   for (const dept of departmentsData) {
     const department = await prisma.department.upsert({
       where: { name: dept.name },
@@ -73,7 +74,11 @@ async function main() {
           })),
         },
       },
+      include: {
+        tasks: true,
+      },
     })
+    allTasks.push(...department.tasks)
     createdDepartments.push(department)
     console.log(`Seeded department: ${dept.name}`)
   }
@@ -104,17 +109,66 @@ async function main() {
   const supervisors = [
     { name: 'Supervisor One', email: 'supervisor1@example.com' },
     { name: 'Supervisor Two', email: 'supervisor2@example.com' },
+    { name: 'Supervisor Three', email: 'supervisor3@example.com' },
   ]
 
   for (const supervisor of supervisors) {
+    let tasksToSupervise = []
+
+    if (supervisor.email === 'supervisor1@example.com') {
+      // Supervisor 1: Engineering and HR
+      const engineeringTasks = allTasks.filter(
+        (t) =>
+          createdDepartments.find((d) => d.id === t.deptId)?.name ===
+          'Engineering'
+      )
+      const hrTasks = allTasks.filter(
+        (t) =>
+          createdDepartments.find((d) => d.id === t.deptId)?.name === 'HR'
+      )
+      // Take 2 from each
+      tasksToSupervise = [
+        ...engineeringTasks.slice(0, 2),
+        ...hrTasks.slice(0, 2),
+      ]
+    } else if (supervisor.email === 'supervisor2@example.com') {
+      // Supervisor 2: Sales and Marketing
+       const salesTasks = allTasks.filter(
+        (t) =>
+          createdDepartments.find((d) => d.id === t.deptId)?.name ===
+          'Sales'
+      )
+      const marketingTasks = allTasks.filter(
+        (t) =>
+          createdDepartments.find((d) => d.id === t.deptId)?.name === 'Marketing'
+      )
+      tasksToSupervise = [
+        ...salesTasks.slice(0, 2),
+        ...marketingTasks.slice(0, 2),
+      ]
+    } else {
+      // Random for others
+      tasksToSupervise = [...allTasks]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 5)
+    }
+
     await prisma.user.upsert({
       where: { email: supervisor.email },
-      update: { role: 'SUPERVISOR' },
+      update: {
+        role: 'SUPERVISOR',
+        supervisingTasks: {
+          set: tasksToSupervise.map((t) => ({ id: t.id })),
+        },
+      },
       create: {
         name: supervisor.name,
         email: supervisor.email,
         role: 'SUPERVISOR',
         emailVerified: true,
+        supervisingTasks: {
+          connect: tasksToSupervise.map((t) => ({ id: t.id })),
+        },
       },
     })
     console.log(`Seeded Supervisor: ${supervisor.email}`)
@@ -142,7 +196,6 @@ async function main() {
   }
 
   // 4. Onboarding Users (Associated with Departments)
-  // Ensure every department has at least some onboarding users
   let onboardingCounter = 1
   for (const dept of createdDepartments) {
     // Create 2 onboarding users per department
@@ -150,11 +203,11 @@ async function main() {
       const email = `onboarding${onboardingCounter}@example.com`
       const name = `Onboarding User ${onboardingCounter}`
 
-      await prisma.user.upsert({
+      const user = await prisma.user.upsert({
         where: { email: email },
         update: {
           role: 'ONBOARDING',
-          deptId: dept.id, // Ensure association on update too if role matches
+          deptId: dept.id,
         },
         create: {
           name: name,
@@ -163,7 +216,29 @@ async function main() {
           emailVerified: true,
           deptId: dept.id,
         },
+        include: {
+          onboardingTasks: true,
+        },
       })
+
+      // Create OnboardingTasks if they don't exist
+      for (const task of dept.tasks) {
+        await prisma.onboardingTask.upsert({
+          where: {
+            userId_taskId: {
+              userId: user.id,
+              taskId: task.id,
+            },
+          },
+          update: {},
+          create: {
+            userId: user.id,
+            taskId: task.id,
+            completed: Math.random() > 0.7, // Randomly complete some tasks
+          },
+        })
+      }
+
       onboardingCounter++
     }
     console.log(`Seeded Onboarding Users for: ${dept.name}`)

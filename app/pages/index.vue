@@ -31,6 +31,10 @@
     watch: [page, limit, debouncedSearch, activeTab],
   })
 
+  // Reference Data for Edit Form
+  const { data: allDepartments } = await useFetch('/api/get/departments/list')
+  const { data: allTasks } = await useFetch('/api/get/tasks')
+
   // Reset page when tab or search changes
   watch([activeTab, debouncedSearch], () => {
     page.value = 1
@@ -38,17 +42,24 @@
 
   // Edit Modal State
   const isEditModalOpen = ref(false)
+  const isConfirmModalOpen = ref(false)
   const selectedUserId = ref<string | null>(null)
+  const originalDeptId = ref<string | null>(null)
+
   const userFormState = reactive({
     name: '',
     email: '',
     phone: '',
+    deptId: undefined as string | undefined,
+    supervisingTaskIds: [] as string[],
   })
 
   const userSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     email: z.string().email('Invalid email address'),
     phone: z.string().nullable().optional(),
+    deptId: z.string().optional(),
+    supervisingTaskIds: z.array(z.string()).optional(),
   })
 
   const userFields: Field[] = [
@@ -67,27 +78,40 @@
     }
   )
 
-  async function handleUpdateUser(data: typeof userFormState) {
+  async function performUpdate() {
     try {
       await $fetch(`/api/put/users/${selectedUserId.value}`, {
         method: 'PUT',
         body: {
-          ...data,
-          phone: parsePhoneNumber(data.phone),
+          ...userFormState,
+          phone: parsePhoneNumber(userFormState.phone),
         },
       })
       toast.add({
         title: 'User updated successfully',
         color: 'success',
       })
+      isEditModalOpen.value = false
+      isConfirmModalOpen.value = false
       await refresh()
     } catch (error: any) {
       toast.add({
         title: error.data?.statusMessage || 'Failed to update user',
         color: 'error',
       })
-      throw error
     }
+  }
+
+  async function handleUpdateUser() {
+    // Check for Department Change warning
+    if (
+      activeTab.value === 'ONBOARDING' &&
+      userFormState.deptId !== originalDeptId.value
+    ) {
+      isConfirmModalOpen.value = true
+      return
+    }
+    await performUpdate()
   }
 
   function getUserActions(row: any): ContextMenuItem[][] {
@@ -96,11 +120,27 @@
         {
           label: 'Edit',
           icon: 'i-heroicons-pencil',
-          onSelect: () => {
+          onSelect: async () => {
             selectedUserId.value = row.id
-            userFormState.name = row.name
-            userFormState.email = row.email
-            userFormState.phone = row.phone || ''
+
+            // Fetch full details to get relations
+            const fullUser = await $fetch(`/api/get/users/byId/${row.id}`)
+
+            let supervisedIds: string[] = []
+            if (activeTab.value === 'SUPERVISOR') {
+              const tasks = await $fetch(
+                `/api/get/users/${row.id}/supervising-tasks`
+              )
+              supervisedIds = tasks.map((t: any) => t.id)
+            }
+
+            userFormState.name = fullUser.name
+            userFormState.email = fullUser.email
+            userFormState.phone = fullUser.phone || ''
+            userFormState.deptId = fullUser.deptId || undefined
+            userFormState.supervisingTaskIds = supervisedIds
+
+            originalDeptId.value = fullUser.deptId
             isEditModalOpen.value = true
           },
         },
@@ -128,6 +168,11 @@
       cell: ({ row }) => row.original.department?.name || 'Unassigned',
     },
   ]
+
+  function handleRowClick(_event: any, row: any) {
+    if (row.original.role === 'ADMIN') return
+    navigateTo(`/users/${row.original.id}`)
+  }
 </script>
 
 <template>
@@ -143,6 +188,7 @@
       :total="usersData?.total || 0"
       :loading="status === 'pending'"
       :row-menu-items="getUserActions"
+      @select="handleRowClick"
     />
 
     <FormModal
@@ -166,6 +212,64 @@
           class="w-full"
         />
       </UFormField>
+
+      <!-- Role Specific Fields -->
+      <UFormField
+        v-if="activeTab === 'ONBOARDING'"
+        label="Department"
+        name="deptId"
+      >
+        <USelectMenu
+          v-model="userFormState.deptId"
+          :items="allDepartments || []"
+          value-key="id"
+          label-key="name"
+          class="w-full"
+          placeholder="Select Department"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="activeTab === 'SUPERVISOR'"
+        label="Supervised Tasks"
+        name="supervisingTaskIds"
+      >
+        <TaskSelector
+          v-model="userFormState.supervisingTaskIds"
+          :tasks="allTasks || []"
+        />
+      </UFormField>
     </FormModal>
+
+    <!-- Confirmation Modal -->
+    <UModal v-model:open="isConfirmModalOpen">
+      <template #content>
+        <UCard>
+          <template #header>
+            <h3
+              class="text-base font-semibold leading-6 text-gray-900 dark:text-white"
+            >
+              Confirm Department Change
+            </h3>
+          </template>
+          <p class="text-sm text-gray-500">
+            Changing the department will
+            <strong>reset all onboarding progress</strong> for this user. New tasks
+            will be assigned based on the new department. Are you sure?
+          </p>
+          <template #footer>
+            <div class="flex justify-end gap-2">
+              <UButton
+                label="Cancel"
+                color="neutral"
+                variant="ghost"
+                @click="isConfirmModalOpen = false"
+              />
+              <UButton label="Confirm" color="error" @click="performUpdate" />
+            </div>
+          </template>
+        </UCard>
+      </template>
+    </UModal>
   </div>
 </template>

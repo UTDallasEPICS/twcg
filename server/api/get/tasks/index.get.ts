@@ -1,22 +1,29 @@
 import { prisma } from '@@/server/utils/prisma'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async () => {
   try {
     const tasks = await prisma.task.findMany({
       include: {
-        dept: true,
+        department: true,
       },
       orderBy: {
-        desc: 'asc',
+        department: {
+          name: 'asc',
+        },
       },
     })
-    return tasks
+
+    return tasks.map((task) => ({
+      id: task.id,
+      label: `[${task.department.name}] ${task.desc}`,
+      value: task.id,
+      deptId: task.deptId,
+    }))
   } catch (error) {
-    console.error('Failed to fetch tasks:', error)
+    console.error('Failed to fetch all tasks:', error)
     throw createError({
       statusCode: 500,
       statusMessage: 'Internal Server Error',
-      message: 'Failed to retrieve tasks',
     })
   }
 })
