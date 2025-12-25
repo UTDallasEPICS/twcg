@@ -3,6 +3,7 @@
   import { refDebounced } from '@vueuse/core'
   import { z } from 'zod'
   import type { Field } from '~/components/FormModal.vue'
+  import { authClient } from '~/utils/auth-client'
 
   const toast = useToast()
   const items = [
@@ -16,6 +17,10 @@
   const limit = ref(5)
   const search = ref('')
   const debouncedSearch = refDebounced(search, 500)
+
+  // Fetch Session
+  const { data: session } = await authClient.useSession(useFetch)
+  const isAdmin = computed(() => session.value?.user?.role === 'ADMIN')
 
   const {
     data: usersData,
@@ -78,74 +83,137 @@
     }
   )
 
-  async function performUpdate() {
+  function openCreateModal() {
+    selectedUserId.value = null
+    userFormState.name = ''
+    userFormState.email = ''
+    userFormState.phone = ''
+    userFormState.deptId = undefined
+    userFormState.supervisingTaskIds = []
+    originalDeptId.value = null
+    isEditModalOpen.value = true
+  }
+
+  async function performSubmit() {
     try {
-      await $fetch(`/api/put/users/${selectedUserId.value}`, {
-        method: 'PUT',
-        body: {
-          ...userFormState,
-          phone: parsePhoneNumber(userFormState.phone),
-        },
-      })
-      toast.add({
-        title: 'User updated successfully',
-        color: 'success',
-      })
+      const payload = {
+        ...userFormState,
+        phone: parsePhoneNumber(userFormState.phone),
+        role: activeTab.value,
+      }
+
+      if (selectedUserId.value) {
+        await $fetch(`/api/put/users/${selectedUserId.value}`, {
+          method: 'PUT',
+          body: payload,
+        })
+        toast.add({
+          title: 'User updated successfully',
+          color: 'success',
+        })
+      } else {
+        await $fetch('/api/post/users', {
+          method: 'POST',
+          body: payload,
+        })
+        toast.add({
+          title: 'User created successfully',
+          color: 'success',
+        })
+      }
       isEditModalOpen.value = false
       isConfirmModalOpen.value = false
       await refresh()
     } catch (error: any) {
       toast.add({
-        title: error.data?.statusMessage || 'Failed to update user',
+        title: error.data?.statusMessage || (selectedUserId.value ? 'Failed to update user' : 'Failed to create user'),
         color: 'error',
       })
     }
   }
 
-  async function handleUpdateUser() {
-    // Check for Department Change warning
+  async function handleSubmitUser() {
+    // Check for Department Change warning only on update
     if (
+      selectedUserId.value &&
       activeTab.value === 'ONBOARDING' &&
       userFormState.deptId !== originalDeptId.value
     ) {
       isConfirmModalOpen.value = true
       return
     }
-    await performUpdate()
+    await performSubmit()
+  }
+
+  // Delete Modal State
+  const isDeleteModalOpen = ref(false)
+  const userToDelete = ref<any>(null)
+
+  function confirmDelete(row: any) {
+    userToDelete.value = row
+    isDeleteModalOpen.value = true
+  }
+
+  async function handleDelete() {
+    if (!userToDelete.value) return
+    try {
+      await $fetch(`/api/delete/users/${userToDelete.value.id}`, {
+        method: 'DELETE',
+      })
+      toast.add({
+        title: 'User deleted successfully',
+        color: 'success',
+      })
+      await refresh()
+    } catch (error) {
+      toast.add({
+        title: 'Failed to delete user',
+        color: 'error',
+      })
+    }
   }
 
   function getUserActions(row: any): ContextMenuItem[][] {
-    return [
-      [
-        {
-          label: 'Edit',
-          icon: 'i-heroicons-pencil',
-          onSelect: async () => {
-            selectedUserId.value = row.id
+    const actions: ContextMenuItem[] = [
+      {
+        label: 'Edit',
+        icon: 'i-heroicons-pencil',
+        onSelect: async () => {
+          selectedUserId.value = row.id
 
-            // Fetch full details to get relations
-            const fullUser = await $fetch(`/api/get/users/byId/${row.id}`)
+          // Fetch full details to get relations
+          const fullUser = await $fetch(`/api/get/users/byId/${row.id}`)
 
-            let supervisedIds: string[] = []
-            if (activeTab.value === 'SUPERVISOR') {
-              const tasks = await $fetch(
-                `/api/get/users/${row.id}/supervising-tasks`
-              )
-              supervisedIds = tasks.map((t: any) => t.id)
-            }
+          let supervisedIds: string[] = []
+          if (activeTab.value === 'SUPERVISOR') {
+            const tasks = await $fetch(
+              `/api/get/users/${row.id}/supervising-tasks`
+            )
+            supervisedIds = tasks.map((t: any) => t.id)
+          }
 
-            userFormState.name = fullUser.name
-            userFormState.email = fullUser.email
-            userFormState.phone = fullUser.phone || ''
-            userFormState.deptId = fullUser.deptId || undefined
-            userFormState.supervisingTaskIds = supervisedIds
+          userFormState.name = fullUser.name
+          userFormState.email = fullUser.email
+          userFormState.phone = fullUser.phone || ''
+          userFormState.deptId = fullUser.deptId || undefined
+          userFormState.supervisingTaskIds = supervisedIds
 
-            originalDeptId.value = fullUser.deptId
-            isEditModalOpen.value = true
-          },
+          originalDeptId.value = fullUser.deptId
+          isEditModalOpen.value = true
         },
-      ],
+      },
     ]
+
+    if (isAdmin.value) {
+      actions.push({
+        label: 'Delete',
+        icon: 'i-heroicons-trash',
+        color: 'error',
+        onSelect: () => confirmDelete(row),
+      })
+    }
+
+    return [actions]
   }
 
   const columns = computed<TableColumn<any>[]>(() => {
@@ -198,17 +266,27 @@
       :data="usersData?.data || []"
       :total="usersData?.total || 0"
       :loading="status === 'pending'"
-      :row-menu-items="getUserActions"
+      :row-menu-items="isAdmin ? getUserActions : undefined"
       @select="handleRowClick"
-    />
+    >
+      <template #header-actions>
+        <UButton
+          v-if="isAdmin"
+          icon="i-heroicons-plus"
+          color="primary"
+          variant="solid"
+          @click="openCreateModal"
+        />
+      </template>
+    </Table>
 
     <FormModal
       v-model="isEditModalOpen"
-      title="Edit User"
+      :title="selectedUserId ? 'Edit User' : 'Create User'"
       :schema="userSchema"
       :state="userFormState"
       :fields="userFields"
-      :on-submit="handleUpdateUser"
+      :on-submit="handleSubmitUser"
     >
       <UFormField label="Name" name="name">
         <UInput v-model="userFormState.name" class="w-full" />
@@ -282,5 +360,12 @@
         </UCard>
       </template>
     </UModal>
+    <!-- Delete Modal -->
+    <DeleteModal
+      v-model="isDeleteModalOpen"
+      title="Delete User"
+      :description="`Are you sure you want to delete ${userToDelete?.name}? This action cannot be undone.`"
+      :on-confirm="handleDelete"
+    />
   </div>
 </template>

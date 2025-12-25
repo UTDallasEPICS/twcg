@@ -33,12 +33,22 @@
     set: (value) => emit('update:page', value),
   })
 
+  const { itemsPerPage: globalLimit } = useTablePreferences()
+
   const currentLimit = computed({
-    get: () => props.itemsPerPage || 10,
+    get: () => props.itemsPerPage || globalLimit.value,
     set: (value) => {
       emit('update:itemsPerPage', Number(value))
+      globalLimit.value = Number(value)
       currentPage.value = 1
     },
+  })
+
+  // Sync parent with global preference on mount if they differ
+  onMounted(() => {
+    if (props.itemsPerPage && props.itemsPerPage !== globalLimit.value) {
+      emit('update:itemsPerPage', globalLimit.value)
+    }
   })
 
   const searchQuery = computed({
@@ -92,13 +102,17 @@
   <div
     class="flex w-full flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800"
   >
-    <div v-if="search !== undefined" class="border-b border-gray-200 p-4 dark:border-gray-800">
+    <div
+      v-if="search !== undefined"
+      class="flex items-center gap-2 border-b border-gray-200 p-4 dark:border-gray-800"
+    >
       <UInput
         v-model="searchQuery"
         icon="i-heroicons-magnifying-glass"
         placeholder="Search..."
-        class="w-full"
+        class="flex-1"
       />
+      <slot name="header-actions" />
     </div>
     <UContextMenu :items="menuItems" :disabled="!rowMenuItems">
       <UTable
@@ -149,7 +163,7 @@
     >
       <div class="flex items-center gap-2">
         <span class="text-sm text-gray-500 dark:text-gray-400">Rows</span>
-        <USelect v-model="currentLimit" :items="itemsPerPageOptions || [1, 3, 5]" class="w-20" />
+        <USelect v-model="currentLimit" :items="itemsPerPageOptions || [5, 10, 20]" class="w-20" />
       </div>
       <UPagination v-model:page="currentPage" :total="total" :items-per-page="itemsPerPage" />
     </div>

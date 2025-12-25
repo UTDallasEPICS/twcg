@@ -3,10 +3,15 @@
   import { z } from 'zod'
   import type { Field } from '~/components/FormModal.vue'
   import { refDebounced } from '@vueuse/core'
+  import { authClient } from '~/utils/auth-client'
 
   const route = useRoute()
   const toast = useToast()
   const deptId = route.params.id as string
+
+  // Fetch Session
+  const { data: session } = await authClient.useSession(useFetch)
+  const isAdmin = computed(() => session.value?.user?.role === 'ADMIN')
 
   // Fetch Department Info
   const { data: department, error: deptError } = await useFetch(
@@ -97,42 +102,103 @@
     supervisorId: z.string().nullable().optional(),
   })
 
-  async function handleUpdate(data: typeof formState) {
+  function openCreateTaskModal() {
+    selectedTaskId.value = null
+    formState.desc = ''
+    formState.category = activeCategory.value || (localCategories.value[0] || '')
+    formState.supervisorId = null
+    isModalOpen.value = true
+  }
+
+  async function handleSubmit(data: typeof formState) {
     try {
-      await $fetch(`/api/put/tasks/${selectedTaskId.value}`, {
-        method: 'PUT',
-        body: data,
-      })
-      toast.add({
-        title: 'Task updated successfully',
-        color: 'success',
-      })
+      if (selectedTaskId.value) {
+        await $fetch(`/api/put/tasks/${selectedTaskId.value}`, {
+          method: 'PUT',
+          body: data,
+        })
+        toast.add({
+          title: 'Task updated successfully',
+          color: 'success',
+        })
+      } else {
+        await $fetch('/api/post/tasks', {
+          method: 'POST',
+          body: {
+            ...data,
+            deptId,
+          },
+        })
+        toast.add({
+          title: 'Task created successfully',
+          color: 'success',
+        })
+      }
+      isModalOpen.value = false
+      // Refresh categories in case a new one was added
       await Promise.all([refreshTasks(), refreshCategories()])
     } catch (error) {
       toast.add({
-        title: 'Failed to update task',
+        title: selectedTaskId.value ? 'Failed to update task' : 'Failed to create task',
         color: 'error',
       })
       throw error
     }
   }
 
+  // Delete Modal State
+  const isDeleteModalOpen = ref(false)
+  const taskToDelete = ref<any>(null)
+
+  function confirmDelete(row: any) {
+    taskToDelete.value = row
+    isDeleteModalOpen.value = true
+  }
+
+  async function handleDelete() {
+    if (!taskToDelete.value) return
+    try {
+      await $fetch(`/api/delete/tasks/${taskToDelete.value.id}`, {
+        method: 'DELETE',
+      })
+      toast.add({
+        title: 'Task deleted successfully',
+        color: 'success',
+      })
+      await Promise.all([refreshTasks(), refreshCategories()])
+    } catch (error) {
+      toast.add({
+        title: 'Failed to delete task',
+        color: 'error',
+      })
+    }
+  }
+
   function getActions(row: any): ContextMenuItem[][] {
-    return [
-      [
-        {
-          label: 'Edit',
-          icon: 'i-heroicons-pencil',
-          onSelect: () => {
-            selectedTaskId.value = row.id
-            formState.desc = row.desc
-            formState.category = row.category
-            formState.supervisorId = row.supervisorId || null
-            isModalOpen.value = true
-          },
+    const actions: ContextMenuItem[] = [
+      {
+        label: 'Edit',
+        icon: 'i-heroicons-pencil',
+        onSelect: () => {
+          selectedTaskId.value = row.id
+          formState.desc = row.desc
+          formState.category = row.category
+          formState.supervisorId = row.supervisorId || null
+          isModalOpen.value = true
         },
-      ],
+      },
     ]
+
+    if (isAdmin.value) {
+      actions.push({
+        label: 'Delete',
+        icon: 'i-heroicons-trash',
+        color: 'error',
+        onSelect: () => confirmDelete(row),
+      })
+    }
+
+    return [actions]
   }
 
   const columns: TableColumn<any>[] = [
@@ -174,21 +240,39 @@
         :data="tasksData?.data || []"
         :loading="status === 'pending'"
         :total="tasksData?.total || 0"
-        :row-menu-items="getActions"
-      />
+        :row-menu-items="isAdmin ? getActions : undefined"
+      >
+        <template #header-actions>
+          <UButton
+            v-if="isAdmin"
+            icon="i-heroicons-plus"
+            color="primary"
+            variant="solid"
+            @click="openCreateTaskModal"
+          />
+        </template>
+      </Table>
     </div>
-    <div v-else-if="status !== 'pending'" class="py-10 text-center">
+    <div v-else-if="status !== 'pending'" class="py-10 text-center flex flex-col items-center gap-4">
       <p class="text-gray-500 dark:text-gray-400">
         No tasks found for this department.
       </p>
+      <UButton
+        v-if="isAdmin"
+        icon="i-heroicons-plus"
+        label="Create First Task"
+        color="primary"
+        variant="solid"
+        @click="openCreateTaskModal"
+      />
     </div>
 
     <FormModal
       v-model="isModalOpen"
-      title="Edit Task"
+      :title="selectedTaskId ? 'Edit Task' : 'Create Task'"
       :schema="taskSchema"
       :state="formState"
-      :on-submit="handleUpdate"
+      :on-submit="handleSubmit"
     >
       <UFormField label="Description" name="desc">
         <UTextarea v-model="formState.desc" class="w-full" />
@@ -213,5 +297,12 @@
         />
       </UFormField>
     </FormModal>
+    <!-- Delete Modal -->
+    <DeleteModal
+      v-model="isDeleteModalOpen"
+      title="Delete Task"
+      :description="`Are you sure you want to delete this task? All onboarding progress for this task will be lost.`"
+      :on-confirm="handleDelete"
+    />
   </div>
 </template>
