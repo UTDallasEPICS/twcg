@@ -87,6 +87,7 @@ async function main() {
 
   // 1. Admins
   const admins = [
+    { name: 'Brandy Lindsey', email: 'brandy.lindsey@thewarrencenter.org' },
     { name: 'Tushar Wani', email: 'reachtusharwani@gmail.com' },
     { name: 'Admin User Two', email: 'admin2@example.com' },
   ]
@@ -145,9 +146,7 @@ async function main() {
     }
 
     if (supervisorEmail) {
-      const supervisor = createdSupervisors.find(
-        (s) => s.email === supervisorEmail
-      )
+      const supervisor = createdSupervisors.find((s) => s.email === supervisorEmail)
       if (supervisor) {
         await prisma.task.update({
           where: { id: task.id },
