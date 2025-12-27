@@ -52,8 +52,6 @@
           toast.add({ title: 'Error', description: error.message, color: 'error' })
         } else {
           const role = data.user.role
-          console.log({ data })
-          console.log({ role })
           // Use window.location for hard reload to clear any stale state if needed, or navigateTo
           //if (role === 'VOLUNTEER') {
           //  await navigateTo('/rides', { external: true })

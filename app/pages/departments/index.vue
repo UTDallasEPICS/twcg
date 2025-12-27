@@ -158,8 +158,6 @@
   ]
 
   function handleRowClick(_event: any, row: any) {
-    console.log('Row clicked:', row)
-    console.log('Target ID:', row.original?.id)
     if (row.original?.id) {
       navigateTo(`/departments/${row.original.id}`)
     } else {

@@ -24,7 +24,6 @@
   // Computed: Group Tasks by Department
   const groupedTasks = computed(() => {
     if (!supervisingTasks.value) return []
-    console.log('Raw Tasks:', supervisingTasks.value)
 
     const groups: Record<string, any[]> = {}
     
